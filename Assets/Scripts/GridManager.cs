@@ -11,6 +11,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] private int height;
     [SerializeField] private int width;
     [SerializeField] private Text scoreText;
+    [SerializeField] private Text timeText;
 
     private Block[,] grid;
     private Block firstBlock;
@@ -21,10 +22,13 @@ public class GridManager : MonoBehaviour
     {
         MakeGrid();
         StartCoroutine(AutoPopRoutine());
+        StartCoroutine(TimerRoutine(60));
     }
 
     void Update()
     {
+
+
         if(isPopping) return;
         if (Input.GetMouseButtonDown(0))
         {
@@ -106,6 +110,7 @@ public class GridManager : MonoBehaviour
         score = 0;
         scoreText.text = "Score : 0";
         StartCoroutine(AutoPopRoutine());
+        StartCoroutine(TimerRoutine(60));
     }
 
     void SwapBlock(Block a, Block b)
@@ -256,5 +261,15 @@ public class GridManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         while(AutoPop()) yield return RespawnRoutine();
         isPopping = false;
+    }
+
+    IEnumerator TimerRoutine(int time)
+    {
+        while (time > 0)
+        {
+            yield return new WaitForSeconds(1);
+            time--;
+            timeText.text = time.ToString();
+        }
     }
 }
