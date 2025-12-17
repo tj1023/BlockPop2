@@ -1,21 +1,28 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class GridManager : MonoBehaviour
 {
+    [Header("----------[ BASE ]----------")]
     [SerializeField] private Block block;
     [SerializeField] private ParticleSystem effect;
     [SerializeField] private int height;
     [SerializeField] private int width;
+
+    [Header("----------[ UI ]----------")]
     [SerializeField] private Text scoreText;
+    [SerializeField] private Text bestScoreText;
     [SerializeField] private Text timeText;
+    [SerializeField] private GameObject gameOverUI;
+    [SerializeField] private Text gameOverScoreText;
+    [SerializeField] private Text gameOverBestScoreText;
 
     private Block[,] grid;
     private Block firstBlock;
     private bool isPopping;
+    private bool gameOver;
     private int score = 0;
 
     void Start()
@@ -23,13 +30,15 @@ public class GridManager : MonoBehaviour
         MakeGrid();
         StartCoroutine(AutoPopRoutine());
         StartCoroutine(TimerRoutine(60));
+
+        if(!PlayerPrefs.HasKey("BestScore"))
+            PlayerPrefs.SetInt("BestScore", 0);
+        bestScoreText.text = "Best : " + PlayerPrefs.GetInt("BestScore").ToString();
     }
 
     void Update()
     {
-
-
-        if(isPopping) return;
+        if(isPopping || gameOver) return;
         if (Input.GetMouseButtonDown(0))
         {
             Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -51,19 +60,7 @@ public class GridManager : MonoBehaviour
                 if (firstBlock && secondBlock && IsAdj(firstBlock, secondBlock))
                 {
                     SwapBlock(firstBlock, secondBlock);
-
                     StartCoroutine(AutoPopRoutine());
-
-                    // isPopping = true;
-                    // bool isFirstBlockPop = PopBlock(firstBlock.y, firstBlock.x);
-                    // bool isSecondBlockPop = PopBlock(secondBlock.y, secondBlock.x);
-
-                    // if(isFirstBlockPop || isSecondBlockPop)
-                    // {
-                    //     StartCoroutine(RespawnRoutine());
-                    //     StartCoroutine(AutoPopRoutine());
-                    // }
-                    // else isPopping = false;
                 }
             }
         }
@@ -98,7 +95,7 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    public void ResetGrid()
+    void ResetGrid()
     {
         for(int i=0; i<height; i++)
         {
@@ -265,11 +262,30 @@ public class GridManager : MonoBehaviour
 
     IEnumerator TimerRoutine(int time)
     {
-        while (time > 0)
+        while(time > 0)
         {
             yield return new WaitForSeconds(1);
             time--;
             timeText.text = time.ToString();
         }
+
+        GameOver();
+    }
+
+    void GameOver()
+    {
+        gameOver = true;
+        gameOverScoreText.text = scoreText.text;
+        int bestScore = Mathf.Max(score, PlayerPrefs.GetInt("BestScore"));
+        PlayerPrefs.SetInt("BestScore", bestScore);
+        gameOverBestScoreText.text = "Best : " + bestScore;
+        gameOverUI.SetActive(true);
+    }
+
+    public void Restart()
+    {
+        gameOverUI.SetActive(false);
+        ResetGrid();
+        gameOver = false;
     }
 }
