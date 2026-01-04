@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class GridManager : MonoBehaviour
 {
@@ -10,68 +9,28 @@ public class GridManager : MonoBehaviour
     [SerializeField] private ParticleSystem effect;
     [SerializeField] private int height;
     [SerializeField] private int width;
-
-    [Header("----------[ UI ]----------")]
-    [SerializeField] private Text scoreText;
-    [SerializeField] private Text bestScoreText;
-    [SerializeField] private Text timeText;
-    [SerializeField] private GameObject gameOverUI;
-    [SerializeField] private Text gameOverScoreText;
-    [SerializeField] private Text gameOverBestScoreText;
-
+    
     private Block[,] grid;
     private Block firstBlock;
-    private bool isPopping;
-    private bool gameOver;
-    private int score = 0;
+    public int Score { get; private set; }
 
-    void Start()
+    private void OnEnable()
+    {
+        GameEvents.OnBlockSwapRequested += HandleBlockSwapRequested;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnBlockSwapRequested -= HandleBlockSwapRequested;
+    }
+
+    private void Start()
     {
         MakeGrid();
         StartCoroutine(AutoPopRoutine());
-        StartCoroutine(TimerRoutine(60));
-
-        if(!PlayerPrefs.HasKey("BestScore"))
-            PlayerPrefs.SetInt("BestScore", 0);
-        bestScoreText.text = "Best : " + PlayerPrefs.GetInt("BestScore").ToString();
     }
 
-    void Update()
-    {
-        if(isPopping || gameOver) return;
-        if (Input.GetMouseButtonDown(0))
-        {
-            Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero);
-
-            if(hit.collider != null)
-            {
-                firstBlock = hit.collider.gameObject.GetComponent<Block>();
-            }
-        }
-        else if (Input.GetMouseButtonUp(0))
-        {
-            Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero);
-
-            if(hit.collider != null)
-            {
-                Block secondBlock = hit.collider.gameObject.GetComponent<Block>();
-                if (firstBlock && secondBlock && IsAdj(firstBlock, secondBlock))
-                {
-                    SwapBlock(firstBlock, secondBlock);
-                    StartCoroutine(AutoPopRoutine());
-                }
-            }
-        }
-    }
-
-    bool IsAdj(Block a, Block b)
-    {
-        return Mathf.Abs(a.y - b.y) + Mathf.Abs(a.x - b.x) == 1;
-    }
-
-    void MakeGrid()
+    private void MakeGrid()
     {
         grid = new Block[height, width];
 
@@ -95,7 +54,7 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    void ResetGrid()
+    public void ResetGrid()
     {
         for(int i=0; i<height; i++)
         {
@@ -104,20 +63,19 @@ public class GridManager : MonoBehaviour
                 grid[i, j].SetColor();
             }
         }
-        score = 0;
-        scoreText.text = "Score : 0";
+        Score = 0;
+        GameEvents.RaiseScoreChanged(Score);
         StartCoroutine(AutoPopRoutine());
-        StartCoroutine(TimerRoutine(60));
     }
 
-    void SwapBlock(Block a, Block b)
+    private void SwapBlock(Block a, Block b)
     {
         int tmp = a.colorIdx;
         a.SetColor(b.colorIdx);
         b.SetColor(tmp);
     }
 
-    bool PopBlock(int y, int x)
+    private bool PopBlock(int y, int x)
     {
         int popCount = 0;
         List<(int y, int x)> col = new List<(int y, int x)>();
@@ -181,13 +139,13 @@ public class GridManager : MonoBehaviour
             popCount += row.Count;
         }
 
-        score += popCount;
-        scoreText.text = "Score : " + score;
+        Score += popCount;
+        GameEvents.RaiseScoreChanged(Score);
 
         return popCount > 0;
     }
 
-    bool DownBlock()
+    private bool DownBlock()
     {
         bool isDown = false;
         for(int i=0; i<height; i++)
@@ -214,7 +172,7 @@ public class GridManager : MonoBehaviour
         return isDown;
     }
 
-    void MakeBlock()
+    private void MakeBlock()
     {
         for(int i=0; i<height; i++)
         {
@@ -229,15 +187,15 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    IEnumerator RespawnRoutine()
+    private IEnumerator RespawnRoutine()
     {
         yield return new WaitForSeconds(0.5f);
         if(DownBlock()) yield return new WaitForSeconds(0.5f);
         MakeBlock();
-        isPopping = false;
+        ChangeState(GameState.Playing);
     }
 
-    bool AutoPop()
+    private bool AutoPop()
     {
         bool isPop = false;
         for(int i=0; i<height; i++)
@@ -252,40 +210,22 @@ public class GridManager : MonoBehaviour
         return isPop;
     }
 
-    IEnumerator AutoPopRoutine()
+    private IEnumerator AutoPopRoutine()
     {
-        isPopping = true;
+        ChangeState(GameState.Popping);
         yield return new WaitForSeconds(0.5f);
         while(AutoPop()) yield return RespawnRoutine();
-        isPopping = false;
+        ChangeState(GameState.Playing);
     }
 
-    IEnumerator TimerRoutine(int time)
+    private void ChangeState(GameState state)
     {
-        while(time > 0)
-        {
-            yield return new WaitForSeconds(1);
-            time--;
-            timeText.text = time.ToString();
-        }
-
-        GameOver();
+        GameEvents.RaiseGameStateChanged(state);
     }
-
-    void GameOver()
+    
+    private void HandleBlockSwapRequested(Block a, Block b)
     {
-        gameOver = true;
-        gameOverScoreText.text = scoreText.text;
-        int bestScore = Mathf.Max(score, PlayerPrefs.GetInt("BestScore"));
-        PlayerPrefs.SetInt("BestScore", bestScore);
-        gameOverBestScoreText.text = "Best : " + bestScore;
-        gameOverUI.SetActive(true);
-    }
-
-    public void Restart()
-    {
-        gameOverUI.SetActive(false);
-        ResetGrid();
-        gameOver = false;
+        SwapBlock(a, b);
+        StartCoroutine(AutoPopRoutine());
     }
 }

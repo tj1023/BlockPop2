@@ -1,13 +1,11 @@
-using System;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Block : MonoBehaviour
 {
     public int y, x, colorIdx;
     public ParticleSystem effect;
     
-    private Color[] colors = {Color.red, Color.orange, Color.yellow, Color.green, Color.blue, Color.navyBlue, Color.purple};
+    private readonly Color[] colors = {Color.red, Color.orange, Color.yellow, Color.green, Color.blue, Color.navyBlue, Color.purple};
     private SpriteRenderer spriteRenderer;
     
 
@@ -23,8 +21,7 @@ public class Block : MonoBehaviour
 
     public void SetColor(int idx = -1)
     {
-        if(idx == -1) colorIdx = UnityEngine.Random.Range(0, colors.Length);
-        else colorIdx = idx;
+        colorIdx = idx == -1 ? Random.Range(0, colors.Length) : idx;
         spriteRenderer.color = colors[colorIdx];
     }
 
