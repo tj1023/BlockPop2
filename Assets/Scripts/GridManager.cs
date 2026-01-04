@@ -192,7 +192,6 @@ public class GridManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         if(DownBlock()) yield return new WaitForSeconds(0.5f);
         MakeBlock();
-        ChangeState(GameState.Playing);
     }
 
     private bool AutoPop()

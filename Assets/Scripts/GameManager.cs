@@ -46,7 +46,7 @@ public class GameManager : MonoBehaviour
             GameEvents.RaiseTimeChanged(floorTime);
         }
         
-        if (currentTime <= 0) GameOver();
+        if (currentTime <= 0 && currentState != GameState.Popping) GameOver();
     }
 
     private void SetState(GameState newState)
