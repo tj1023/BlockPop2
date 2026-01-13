@@ -1,4 +1,5 @@
 using UnityEngine;
+using DG.Tweening;
 
 public class Block : MonoBehaviour
 {
@@ -29,5 +30,11 @@ public class Block : MonoBehaviour
     {
         effect.transform.position = transform.position;
         effect.Play();
+    }
+    
+    public void MoveToTarget(Vector3 targetPos, float duration)
+    {
+        transform.DOKill();
+        transform.DOMove(targetPos, duration).SetEase(Ease.OutBounce);
     }
 }

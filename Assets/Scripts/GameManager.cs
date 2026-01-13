@@ -63,6 +63,7 @@ public class GameManager : MonoBehaviour
 
     private void GameOver()
     {
+        gridManager.autoMod = false;
         SetState(GameState.GameOver);
         uiManager.GameOver(gridManager.Score);
     }

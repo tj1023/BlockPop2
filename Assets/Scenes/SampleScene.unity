@@ -1117,7 +1117,7 @@ Transform:
   m_GameObject: {fileID: 1461398656}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -3, y: -3, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1137,8 +1137,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GridManager
   block: {fileID: 7550893776420697281, guid: e2b784bd06a019e46908ab8a32dad755, type: 3}
   effect: {fileID: 9181406481490086555, guid: 97ef4e22a1b518b428d7db73197da3c1, type: 3}
-  height: 6
-  width: 6
+  height: 8
+  width: 8
+  autoMod: 0
 --- !u!1 &1480443944
 GameObject:
   m_ObjectHideFlags: 0

@@ -10,9 +10,14 @@ public class GridManager : MonoBehaviour
     [SerializeField] private int height;
     [SerializeField] private int width;
     
+    [Header("----------[ DEBUG ]----------")]
+    [SerializeField] public bool autoMod;
+    
+    public int Score { get; private set; }
+    
     private Block[,] grid;
     private Block firstBlock;
-    public int Score { get; private set; }
+    private GameState currentState = GameState.Playing;
 
     private void OnEnable()
     {
@@ -32,18 +37,17 @@ public class GridManager : MonoBehaviour
 
     private void MakeGrid()
     {
+        transform.position -= new Vector3(height / 2f, width / 2f, 0);
         grid = new Block[height, width];
 
         for(int i=0; i<height; i++)
         {
             for(int j=0; j<width; j++)
             {
-                Vector3 pos = transform.position;
-                pos.y += i * 1.1f;
-                pos.x += j * 1.1f;
+                Vector3 pos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
                 Block curBlock = Instantiate(block, transform);
 
-                curBlock.name = "Block[" + i + "][" + j + "]";
+                curBlock.name = $"Block[{i}][{j}]";
                 curBlock.transform.position = pos;
                 curBlock.y = i;
                 curBlock.x = j;
@@ -54,7 +58,7 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    public void ResetGrid()
+    public void ResetGrid(int score = 0)
     {
         for(int i=0; i<height; i++)
         {
@@ -63,89 +67,91 @@ public class GridManager : MonoBehaviour
                 grid[i, j].SetColor();
             }
         }
-        Score = 0;
+        Score = score;
         GameEvents.RaiseScoreChanged(Score);
         StartCoroutine(AutoPopRoutine());
     }
 
-    private void SwapBlock(Block a, Block b)
+    private static void SwapBlockColor(Block a, Block b)
     {
         int tmp = a.colorIdx;
         a.SetColor(b.colorIdx);
         b.SetColor(tmp);
     }
 
-    private bool PopBlock(int y, int x)
+    private static void SwapBlockPosition(Block a, Block b)
     {
-        int popCount = 0;
-        List<(int y, int x)> col = new List<(int y, int x)>();
-        List<(int y, int x)> row = new List<(int y, int x)>();
-        int colorIdx = grid[y, x].colorIdx;
+        Vector3 posA = a.transform.position;
+        Vector3 posB = b.transform.position;
+        a.transform.position = posB;
+        b.transform.position = posA;
+        a.MoveToTarget(posA, 0.4f);
+        b.MoveToTarget(posB, 0.4f);
+    }
+    
+    private static void SwapBlock(Block a, Block b)
+    {
+        SwapBlockColor(a, b);
+        SwapBlockPosition(a, b);
+    }
 
-        Queue<(int y, int x, bool d)> q = new Queue<(int y, int x, bool d)>();
-        bool[,] visited = new bool[height, width];
-        q.Enqueue((y, x, false));
-        q.Enqueue((y, x, true));
-        visited[y, x] = true;
-        col.Add((y, x));
-        row.Add((y, x));
+    private HashSet<(int, int)> GetMatchedBlocks()
+    {
+        HashSet<(int, int)> matchedBlocks = new HashSet<(int, int)>();
 
-        while(q.Count > 0)
+        for (int i = 0; i < height; i++)
         {
-            var yx = q.Dequeue();
-
-            if(!yx.d && yx.y + 1 < height && !visited[yx.y + 1, yx.x] && grid[yx.y + 1, yx.x].colorIdx == colorIdx)
+            for (int j = 0; j < width - 2; j++)
             {
-                q.Enqueue((yx.y + 1, yx.x, false));
-                visited[yx.y + 1, yx.x] = true;
-                col.Add((yx.y + 1, yx.x));
-            }
-            if(!yx.d && yx.y - 1 >= 0 && !visited[yx.y - 1, yx.x] && grid[yx.y - 1, yx.x].colorIdx == colorIdx)
-            {
-                q.Enqueue((yx.y - 1, yx.x, false));
-                visited[yx.y - 1, yx.x] = true;
-                col.Add((yx.y - 1, yx.x));
-            }
-            if(yx.d && yx.x + 1 < width && !visited[yx.y, yx.x + 1] && grid[yx.y, yx.x + 1].colorIdx == colorIdx)
-            {
-                q.Enqueue((yx.y, yx.x + 1, true));
-                visited[yx.y, yx.x + 1] = true;
-                row.Add((yx.y, yx.x + 1));
-            }
-            if(yx.d && yx.x - 1 >= 0 && !visited[yx.y, yx.x - 1] && grid[yx.y, yx.x - 1].colorIdx == colorIdx)
-            {
-                q.Enqueue((yx.y, yx.x - 1, true));
-                visited[yx.y, yx.x - 1] = true;
-                row.Add((yx.y, yx.x - 1));
+                if (grid[i, j].gameObject.activeSelf && grid[i, j + 1].gameObject.activeSelf && grid[i, j + 2].gameObject.activeSelf
+                    && grid[i, j].colorIdx == grid[i, j + 1].colorIdx && grid[i, j].colorIdx == grid[i, j + 2].colorIdx)
+                {
+                    matchedBlocks.Add((i, j));
+                    matchedBlocks.Add((i, j + 1));
+                    matchedBlocks.Add((i, j + 2));
+                }
             }
         }
 
-        if(col.Count >= 3)
+        for (int i = 0; i < width; i++)
         {
-            foreach(var yx in col)
+            for (int j = 0; j < height - 2; j++)
             {
-                grid[yx.y, yx.x].EffectPlay();
-                grid[yx.y, yx.x].gameObject.SetActive(false);
+                if (grid[j, i].gameObject.activeSelf && grid[j + 1, i].gameObject.activeSelf && grid[j + 2, i].gameObject.activeSelf
+                    && grid[j, i].colorIdx == grid[j + 1, i].colorIdx && grid[j, i].colorIdx == grid[j + 2, i].colorIdx)
+                {
+                    matchedBlocks.Add((j, i));
+                    matchedBlocks.Add((j + 1, i));
+                    matchedBlocks.Add((j + 2, i));
+                }
             }
-            popCount += col.Count;
-        }
-        if(row.Count >= 3)
-        {
-            foreach(var yx in row)
-            {
-                grid[yx.y, yx.x].EffectPlay();
-                grid[yx.y, yx.x].gameObject.SetActive(false);
-            }
-            popCount += row.Count;
         }
 
+        return matchedBlocks;
+    }
+
+    private static void PopBlock(Block b)
+    {
+        b.EffectPlay();
+        b.gameObject.SetActive(false);
+    }
+    
+    private bool PopMatchedBlocks()
+    {
+        HashSet<(int y, int x)> matchedBlocks = GetMatchedBlocks();
+        int popCount = matchedBlocks.Count;
+        if (popCount == 0) return false;
+        
+        foreach (var yx in matchedBlocks)
+            PopBlock(grid[yx.y, yx.x]);
+        
         Score += popCount;
         GameEvents.RaiseScoreChanged(Score);
 
-        return popCount > 0;
+        return true;
     }
-
-    private bool DownBlock()
+    
+    private bool DropBlock()
     {
         bool isDown = false;
         for(int i=0; i<height; i++)
@@ -158,10 +164,15 @@ public class GridManager : MonoBehaviour
                     {
                         if(grid[k, j].gameObject.activeSelf)
                         {
-                            isDown = true;
                             grid[i, j].SetColor(grid[k, j].colorIdx);
                             grid[i, j].gameObject.SetActive(true);
                             grid[k, j].gameObject.SetActive(false);
+                            
+                            grid[i, j].transform.position = grid[k, j].transform.position;
+                            Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
+                            grid[i, j].MoveToTarget(targetPos, 0.4f);
+                            
+                            isDown = true;
                             break;
                         }
                     }
@@ -182,6 +193,10 @@ public class GridManager : MonoBehaviour
                 {
                     grid[i, j].SetColor();
                     grid[i, j].gameObject.SetActive(true);
+                    
+                    Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
+                    grid[i, j].transform.position = targetPos + Vector3.up * 2f;
+                    grid[i, j].MoveToTarget(targetPos, 0.5f);
                 }
             }
         }
@@ -189,42 +204,83 @@ public class GridManager : MonoBehaviour
 
     private IEnumerator RespawnRoutine()
     {
-        yield return new WaitForSeconds(0.5f);
-        if(DownBlock()) yield return new WaitForSeconds(0.5f);
+        if(DropBlock()) yield return new WaitForSeconds(0.5f);
         MakeBlock();
+        yield return new WaitForSeconds(0.5f);
     }
-
-    private bool AutoPop()
-    {
-        bool isPop = false;
-        for(int i=0; i<height; i++)
-        {
-            for(int j=0; j<width; j++)
-            {
-                if(grid[i, j].gameObject.activeSelf && PopBlock(i, j))
-                    isPop = true;
-            }
-        }
-
-        return isPop;
-    }
-
+    
     private IEnumerator AutoPopRoutine()
     {
         ChangeState(GameState.Popping);
         yield return new WaitForSeconds(0.5f);
-        while(AutoPop()) yield return RespawnRoutine();
+        while(PopMatchedBlocks()) yield return RespawnRoutine();
+        
+        if(!HasAnyPossibleSwap()) ResetGrid(Score);
         ChangeState(GameState.Playing);
     }
 
     private void ChangeState(GameState state)
     {
+        currentState = state;
         GameEvents.RaiseGameStateChanged(state);
     }
     
     private void HandleBlockSwapRequested(Block a, Block b)
     {
+        if(currentState == GameState.Playing)
+            StartCoroutine(SwapBlockRoutine(a, b));
+    }
+
+    IEnumerator SwapBlockRoutine(Block a, Block b)
+    {
         SwapBlock(a, b);
-        StartCoroutine(AutoPopRoutine());
+        if (GetMatchedBlocks().Count > 0)
+        {
+            yield return StartCoroutine(AutoPopRoutine());
+        }
+        else
+        {
+            yield return new WaitForSeconds(0.4f);
+            SwapBlock(a, b);
+        }
+    }
+
+    private bool HasAnyPossibleSwap()
+    {
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j + 1 < width; j++)
+            {
+                Block a = grid[i, j];
+                Block b = grid[i, j + 1];
+                SwapBlockColor(a, b);
+                if (GetMatchedBlocks().Count > 0)
+                {
+                    SwapBlockColor(a, b);
+                    if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
+                    return true;
+                }
+                SwapBlockColor(a, b);
+            }
+        }
+        
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j + 1 < height; j++)
+            {
+                Block a = grid[j, i];
+                Block b = grid[j + 1, i];
+                SwapBlockColor(a, b);
+                if (GetMatchedBlocks().Count > 0)
+                {
+                    SwapBlockColor(a, b);
+                    if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
+                    return true;
+                }
+                SwapBlockColor(a, b);
+            }
+        }
+        
+        return false;
     }
 }

@@ -48,7 +48,7 @@ public class InputManager : MonoBehaviour
         return hit.collider ? hit.collider.GetComponent<Block>() : null;
     }
 
-    private bool IsAdj(Block a, Block b)
+    private static bool IsAdj(Block a, Block b)
     {
         return Mathf.Abs(a.y - b.y) + Mathf.Abs(a.x - b.x) == 1;
     }
