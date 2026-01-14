@@ -18,7 +18,6 @@ public class GridManager : MonoBehaviour
     
     private Block[,] grid;
     private Block firstBlock;
-    private GameState currentState = GameState.Playing;
     private int busyCount;
     private bool pendingReset;
     private bool IsBusy => busyCount > 0;
@@ -111,12 +110,12 @@ public class GridManager : MonoBehaviour
         int count = 1;
         for (int nx = x - 1; nx >= 0; nx--)
         {
-            if (grid[y, nx].colorIdx != color) break;
+            if (!grid[y, nx].gameObject.activeSelf || grid[y, nx].colorIdx != color) break;
             count++;
         }
         for (int nx = x + 1; nx < width; nx++)
         {
-            if (grid[y, nx].colorIdx != color) break;
+            if (!grid[y, nx].gameObject.activeSelf || grid[y, nx].colorIdx != color) break;
             count++;
         }
         if (count >= 3) return true;
@@ -124,13 +123,13 @@ public class GridManager : MonoBehaviour
         count = 1;
         for (int ny = y - 1; ny >= 0; ny--)
         {
-            if (grid[ny, x].colorIdx != color) break;
+            if (!grid[ny, x].gameObject.activeSelf || grid[ny, x].colorIdx != color) break;
             count++;
         }
 
         for (int ny = y + 1; ny < height; ny++)
         {
-            if (grid[ny, x].colorIdx != color) break;
+            if (!grid[ny, x].gameObject.activeSelf || grid[ny, x].colorIdx != color) break;
             count++;
         }
         return count >= 3;
@@ -264,13 +263,12 @@ public class GridManager : MonoBehaviour
 
     private void ChangeState(GameState state)
     {
-        currentState = state;
         GameEvents.RaiseGameStateChanged(state);
     }
     
     private void HandleBlockSwapRequested(Block a, Block b)
     {
-        if (currentState != GameState.Playing || IsBusy) return;
+        if (IsBusy || !a.gameObject.activeSelf || !b.gameObject.activeSelf) return;
         StartCoroutine(SwapBlockRoutine(a, b));
     }
 
@@ -319,14 +317,16 @@ public class GridManager : MonoBehaviour
             {
                 Block a = grid[j, i];
                 Block b = grid[j + 1, i];
+                
                 SwapBlockColor(a, b);
-                if (GetMatchedBlocks().Count > 0)
+                bool canMatch = CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x);
+                SwapBlockColor(a, b);
+
+                if (canMatch)
                 {
-                    SwapBlockColor(a, b);
                     if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
                     return true;
                 }
-                SwapBlockColor(a, b);
             }
         }
         
