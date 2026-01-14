@@ -103,6 +103,39 @@ public class GridManager : MonoBehaviour
         SwapBlockPosition(a, b);
     }
 
+    private bool CheckMatchAt(int y, int x)
+    {
+        Block center = grid[y, x];
+        int color = center.colorIdx;
+
+        int count = 1;
+        for (int nx = x - 1; nx >= 0; nx--)
+        {
+            if (grid[y, nx].colorIdx != color) break;
+            count++;
+        }
+        for (int nx = x + 1; nx < width; nx++)
+        {
+            if (grid[y, nx].colorIdx != color) break;
+            count++;
+        }
+        if (count >= 3) return true;
+        
+        count = 1;
+        for (int ny = y - 1; ny >= 0; ny--)
+        {
+            if (grid[ny, x].colorIdx != color) break;
+            count++;
+        }
+
+        for (int ny = y + 1; ny < height; ny++)
+        {
+            if (grid[ny, x].colorIdx != color) break;
+            count++;
+        }
+        return count >= 3;
+    }
+    
     private HashSet<(int, int)> GetMatchedBlocks()
     {
         HashSet<(int, int)> matchedBlocks = new HashSet<(int, int)>();
@@ -246,7 +279,7 @@ public class GridManager : MonoBehaviour
         BeginResolve();
         
         SwapBlock(a, b);
-        if (GetMatchedBlocks().Count > 0)
+        if (CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x))
         {
             yield return StartCoroutine(AutoPopRoutine());
         }
@@ -267,14 +300,16 @@ public class GridManager : MonoBehaviour
             {
                 Block a = grid[i, j];
                 Block b = grid[i, j + 1];
+                
                 SwapBlockColor(a, b);
-                if (GetMatchedBlocks().Count > 0)
+                bool canMatch = CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x);
+                SwapBlockColor(a, b);
+
+                if (canMatch)
                 {
-                    SwapBlockColor(a, b);
                     if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
                     return true;
                 }
-                SwapBlockColor(a, b);
             }
         }
         
