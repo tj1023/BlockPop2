@@ -29,7 +29,6 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        SetState(GameState.Playing);
         GameStart();
     }
 
@@ -58,6 +57,7 @@ public class GameManager : MonoBehaviour
 
     private void GameStart()
     {
+        SetState(GameState.Playing);
         currentTime = maxTime;
         lastTime = (int)maxTime;
         isTimerRunning = true;

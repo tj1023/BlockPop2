@@ -30,9 +30,9 @@ public class Block : MonoBehaviour
         effect.Play();
     }
     
-    public void MoveToTarget(Vector3 targetPos, float duration)
+    public void MoveToTarget(Vector3 targetPos, float duration, Ease ease = Ease.Linear)
     {
         transform.DOKill();
-        transform.DOMove(targetPos, duration).SetEase(Ease.OutBounce);
+        transform.DOMove(targetPos, duration).SetEase(ease);
     }
 }

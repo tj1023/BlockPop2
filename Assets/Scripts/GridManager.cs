@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 public class GridManager : MonoBehaviour
 {
@@ -92,8 +93,8 @@ public class GridManager : MonoBehaviour
         Vector3 posB = b.transform.position;
         a.transform.position = posB;
         b.transform.position = posA;
-        a.MoveToTarget(posA, 0.25f);
-        b.MoveToTarget(posB, 0.25f);
+        a.MoveToTarget(posA, 0.25f, Ease.InOutQuad);
+        b.MoveToTarget(posB, 0.25f, Ease.OutQuad);
     }
     
     private static void SwapBlock(Block a, Block b)
@@ -177,7 +178,7 @@ public class GridManager : MonoBehaviour
                             
                             grid[i, j].transform.position = grid[k, j].transform.position;
                             Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
-                            grid[i, j].MoveToTarget(targetPos, 0.5f);
+                            grid[i, j].MoveToTarget(targetPos, 0.5f, Ease.OutBounce);
                             
                             isDown = true;
                             break;
@@ -203,7 +204,7 @@ public class GridManager : MonoBehaviour
                     
                     Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
                     grid[i, j].transform.position = transform.position + new Vector3(j * 1.1f, 10, 0);
-                    grid[i, j].MoveToTarget(targetPos, 0.5f);
+                    grid[i, j].MoveToTarget(targetPos, 0.5f, Ease.OutBounce);
                 }
             }
         }
