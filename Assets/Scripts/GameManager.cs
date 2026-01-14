@@ -45,8 +45,10 @@ public class GameManager : MonoBehaviour
             lastTime = floorTime;
             GameEvents.RaiseTimeChanged(floorTime);
         }
-        
-        if (currentTime <= 0 && currentState != GameState.Popping) GameOver();
+
+        if (currentTime > 0) return;
+        gridManager.autoMod = false;
+        if(currentState != GameState.Popping) GameOver();
     }
 
     private void SetState(GameState newState)
@@ -63,7 +65,6 @@ public class GameManager : MonoBehaviour
 
     private void GameOver()
     {
-        gridManager.autoMod = false;
         SetState(GameState.GameOver);
         uiManager.GameOver(gridManager.Score);
     }

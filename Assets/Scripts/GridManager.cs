@@ -18,6 +18,9 @@ public class GridManager : MonoBehaviour
     private Block[,] grid;
     private Block firstBlock;
     private GameState currentState = GameState.Playing;
+    private int busyCount;
+    private bool pendingReset;
+    private bool IsBusy => busyCount > 0;
 
     private void OnEnable()
     {
@@ -44,18 +47,19 @@ public class GridManager : MonoBehaviour
         {
             for(int j=0; j<width; j++)
             {
-                Vector3 pos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
                 Block curBlock = Instantiate(block, transform);
 
                 curBlock.name = $"Block[{i}][{j}]";
-                curBlock.transform.position = pos;
                 curBlock.y = i;
                 curBlock.x = j;
                 curBlock.effect = Instantiate(effect, transform);
+                curBlock.gameObject.SetActive(false);
 
                 grid[i, j] = curBlock;
             }
         }
+        
+        MakeBlock();
     }
 
     public void ResetGrid(int score = 0)
@@ -64,9 +68,12 @@ public class GridManager : MonoBehaviour
         {
             for(int j=0; j<width; j++)
             {
-                grid[i, j].SetColor();
+                grid[i, j].gameObject.SetActive(false);
             }
         }
+        
+        MakeBlock();
+        
         Score = score;
         GameEvents.RaiseScoreChanged(Score);
         StartCoroutine(AutoPopRoutine());
@@ -85,8 +92,8 @@ public class GridManager : MonoBehaviour
         Vector3 posB = b.transform.position;
         a.transform.position = posB;
         b.transform.position = posA;
-        a.MoveToTarget(posA, 0.4f);
-        b.MoveToTarget(posB, 0.4f);
+        a.MoveToTarget(posA, 0.25f);
+        b.MoveToTarget(posB, 0.25f);
     }
     
     private static void SwapBlock(Block a, Block b)
@@ -170,7 +177,7 @@ public class GridManager : MonoBehaviour
                             
                             grid[i, j].transform.position = grid[k, j].transform.position;
                             Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
-                            grid[i, j].MoveToTarget(targetPos, 0.4f);
+                            grid[i, j].MoveToTarget(targetPos, 0.5f);
                             
                             isDown = true;
                             break;
@@ -195,7 +202,7 @@ public class GridManager : MonoBehaviour
                     grid[i, j].gameObject.SetActive(true);
                     
                     Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
-                    grid[i, j].transform.position = targetPos + Vector3.up * 2f;
+                    grid[i, j].transform.position = transform.position + new Vector3(j * 1.1f, 10, 0);
                     grid[i, j].MoveToTarget(targetPos, 0.5f);
                 }
             }
@@ -211,12 +218,14 @@ public class GridManager : MonoBehaviour
     
     private IEnumerator AutoPopRoutine()
     {
-        ChangeState(GameState.Popping);
+        Lock();
+        
         yield return new WaitForSeconds(0.5f);
         while(PopMatchedBlocks()) yield return RespawnRoutine();
         
-        if(!HasAnyPossibleSwap()) ResetGrid(Score);
-        ChangeState(GameState.Playing);
+        if(!HasAnyPossibleSwap()) pendingReset = true;
+        
+        Unlock();
     }
 
     private void ChangeState(GameState state)
@@ -227,12 +236,14 @@ public class GridManager : MonoBehaviour
     
     private void HandleBlockSwapRequested(Block a, Block b)
     {
-        if(currentState == GameState.Playing)
-            StartCoroutine(SwapBlockRoutine(a, b));
+        if (currentState != GameState.Playing || IsBusy) return;
+        StartCoroutine(SwapBlockRoutine(a, b));
     }
 
     IEnumerator SwapBlockRoutine(Block a, Block b)
     {
+        BeginResolve();
+        
         SwapBlock(a, b);
         if (GetMatchedBlocks().Count > 0)
         {
@@ -240,9 +251,11 @@ public class GridManager : MonoBehaviour
         }
         else
         {
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.5f);
             SwapBlock(a, b);
         }
+        
+        EndResolve();
     }
 
     private bool HasAnyPossibleSwap()
@@ -282,5 +295,33 @@ public class GridManager : MonoBehaviour
         }
         
         return false;
+    }
+    
+    private void Lock()
+    {
+        busyCount++;
+    }
+
+    private void Unlock()
+    {
+        busyCount--;
+        if (busyCount < 0) busyCount = 0;
+    }
+    
+    private void BeginResolve()
+    {
+        Lock();
+        ChangeState(GameState.Popping);
+    }
+
+    private void EndResolve()
+    {
+        Unlock();
+        if (IsBusy) return;
+        ChangeState(GameState.Playing);
+
+        if (!pendingReset) return;
+        pendingReset = false;
+        ResetGrid(Score);
     }
 }
