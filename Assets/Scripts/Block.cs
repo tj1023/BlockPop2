@@ -5,10 +5,8 @@ public class Block : MonoBehaviour
 {
     public int y, x, colorIdx;
     public ParticleSystem effect;
-    
-    private readonly Color[] colors = {Color.red, Color.orange, Color.yellow, Color.green, Color.blue, Color.navyBlue, Color.purple};
+    [SerializeField] private Sprite[] sprites;
     private SpriteRenderer spriteRenderer;
-    
 
     void Awake()
     {
@@ -22,8 +20,8 @@ public class Block : MonoBehaviour
 
     public void SetColor(int idx = -1)
     {
-        colorIdx = idx == -1 ? Random.Range(0, colors.Length) : idx;
-        spriteRenderer.color = colors[colorIdx];
+        colorIdx = idx == -1 ? Random.Range(0, sprites.Length) : idx;
+        spriteRenderer.sprite = sprites[colorIdx];
     }
 
     public void EffectPlay()
