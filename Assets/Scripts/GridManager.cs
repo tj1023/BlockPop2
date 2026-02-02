@@ -21,6 +21,7 @@ public class GridManager : MonoBehaviour
     private int busyCount;
     private bool pendingReset;
     private bool IsBusy => busyCount > 0;
+    private const float WaitTime = 0.5f;
 
     private void OnEnable()
     {
@@ -210,7 +211,7 @@ public class GridManager : MonoBehaviour
                             
                             grid[i, j].transform.position = grid[k, j].transform.position;
                             Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
-                            grid[i, j].MoveToTarget(targetPos, 0.5f, Ease.OutBounce);
+                            grid[i, j].MoveToTarget(targetPos, WaitTime, Ease.OutBounce);
                             
                             isDown = true;
                             break;
@@ -236,7 +237,7 @@ public class GridManager : MonoBehaviour
                     
                     Vector3 targetPos = transform.position + new Vector3(j * 1.1f, i * 1.1f, 0);
                     grid[i, j].transform.position = transform.position + new Vector3(j * 1.1f, 10, 0);
-                    grid[i, j].MoveToTarget(targetPos, 0.5f, Ease.OutBounce);
+                    grid[i, j].MoveToTarget(targetPos, WaitTime, Ease.OutBounce);
                 }
             }
         }
@@ -244,16 +245,16 @@ public class GridManager : MonoBehaviour
 
     private IEnumerator RespawnRoutine()
     {
-        if(DropBlock()) yield return new WaitForSeconds(0.5f);
+        if(DropBlock()) yield return new WaitForSeconds(WaitTime);
         MakeBlock();
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(WaitTime);
     }
     
     private IEnumerator AutoPopRoutine()
     {
         Lock();
         
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(WaitTime);
         while(PopMatchedBlocks()) yield return RespawnRoutine();
         
         if(!HasAnyPossibleSwap()) pendingReset = true;
@@ -283,7 +284,7 @@ public class GridManager : MonoBehaviour
         }
         else
         {
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(WaitTime);
             SwapBlock(a, b);
         }
         
