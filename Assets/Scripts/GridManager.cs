@@ -171,6 +171,49 @@ public class GridManager : MonoBehaviour
         return matchedBlocks;
     }
 
+    private bool HasAnyPossibleSwap()
+    {
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j + 1 < width; j++)
+            {
+                Block a = grid[i, j];
+                Block b = grid[i, j + 1];
+                
+                SwapBlockColor(a, b);
+                bool canMatch = CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x);
+                SwapBlockColor(a, b);
+
+                if (canMatch)
+                {
+                    if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
+                    return true;
+                }
+            }
+        }
+        
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j + 1 < height; j++)
+            {
+                Block a = grid[j, i];
+                Block b = grid[j + 1, i];
+                
+                SwapBlockColor(a, b);
+                bool canMatch = CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x);
+                SwapBlockColor(a, b);
+
+                if (canMatch)
+                {
+                    if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
     private static void PopBlock(Block b)
     {
         b.EffectPlay();
@@ -243,97 +286,11 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    private IEnumerator RespawnRoutine()
-    {
-        if(DropBlock()) yield return new WaitForSeconds(WaitTime);
-        MakeBlock();
-        yield return new WaitForSeconds(WaitTime);
-    }
-    
-    private IEnumerator AutoPopRoutine()
-    {
-        Lock();
-        
-        yield return new WaitForSeconds(WaitTime);
-        while(PopMatchedBlocks()) yield return RespawnRoutine();
-        
-        if(!HasAnyPossibleSwap()) pendingReset = true;
-        
-        Unlock();
-    }
-
-    private void ChangeState(GameState state)
+    private static void ChangeState(GameState state)
     {
         GameEvents.RaiseGameStateChanged(state);
     }
-    
-    private void HandleBlockSwapRequested(Block a, Block b)
-    {
-        if (IsBusy || !a.gameObject.activeSelf || !b.gameObject.activeSelf) return;
-        StartCoroutine(SwapBlockRoutine(a, b));
-    }
 
-    IEnumerator SwapBlockRoutine(Block a, Block b)
-    {
-        BeginResolve();
-        
-        SwapBlock(a, b);
-        if (CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x))
-        {
-            yield return StartCoroutine(AutoPopRoutine());
-        }
-        else
-        {
-            yield return new WaitForSeconds(WaitTime);
-            SwapBlock(a, b);
-        }
-        
-        EndResolve();
-    }
-
-    private bool HasAnyPossibleSwap()
-    {
-        for (int i = 0; i < height; i++)
-        {
-            for (int j = 0; j + 1 < width; j++)
-            {
-                Block a = grid[i, j];
-                Block b = grid[i, j + 1];
-                
-                SwapBlockColor(a, b);
-                bool canMatch = CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x);
-                SwapBlockColor(a, b);
-
-                if (canMatch)
-                {
-                    if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
-                    return true;
-                }
-            }
-        }
-        
-        for (int i = 0; i < width; i++)
-        {
-            for (int j = 0; j + 1 < height; j++)
-            {
-                Block a = grid[j, i];
-                Block b = grid[j + 1, i];
-                
-                SwapBlockColor(a, b);
-                bool canMatch = CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x);
-                SwapBlockColor(a, b);
-
-                if (canMatch)
-                {
-                    if(autoMod) StartCoroutine(SwapBlockRoutine(a, b));
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
-    
     private void Lock()
     {
         busyCount++;
@@ -360,5 +317,48 @@ public class GridManager : MonoBehaviour
         if (!pendingReset) return;
         pendingReset = false;
         ResetGrid(Score);
+    }
+        
+    private void HandleBlockSwapRequested(Block a, Block b)
+    {
+        if (IsBusy || !a.gameObject.activeSelf || !b.gameObject.activeSelf) return;
+        StartCoroutine(SwapBlockRoutine(a, b));
+    }
+
+    private IEnumerator RespawnRoutine()
+    {
+        if(DropBlock()) yield return new WaitForSeconds(WaitTime);
+        MakeBlock();
+        yield return new WaitForSeconds(WaitTime);
+    }
+    
+    private IEnumerator AutoPopRoutine()
+    {
+        Lock();
+        
+        yield return new WaitForSeconds(WaitTime);
+        while(PopMatchedBlocks()) yield return RespawnRoutine();
+        
+        if(!HasAnyPossibleSwap()) pendingReset = true;
+        
+        Unlock();
+    }
+
+    private IEnumerator SwapBlockRoutine(Block a, Block b)
+    {
+        BeginResolve();
+        
+        SwapBlock(a, b);
+        if (CheckMatchAt(a.y, a.x) || CheckMatchAt(b.y, b.x))
+        {
+            yield return StartCoroutine(AutoPopRoutine());
+        }
+        else
+        {
+            yield return new WaitForSeconds(WaitTime);
+            SwapBlock(a, b);
+        }
+        
+        EndResolve();
     }
 }
